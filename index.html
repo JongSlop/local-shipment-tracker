@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="{{.Lang}}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{t .Lang "title"}}</title>
+<script src="/static/htmx.min.js"></script>
+<style>
+:root { color-scheme: light dark; --bd: #8884; --ac: #d40511; }
+* { box-sizing: border-box; }
+body { font: 16px/1.4 system-ui, sans-serif; max-width: 52rem; margin: 0 auto; padding: 1rem; }
+h1 { font-size: 1.5rem; }
+h2 { font-size: 1rem; text-transform: uppercase; letter-spacing: .05em; opacity: .7; margin: 1.5rem 0 .5rem; }
+form { display: flex; flex-wrap: wrap; gap: .5rem; }
+input, select, button { font: inherit; padding: .5rem .7rem; border: 1px solid var(--bd); border-radius: .4rem; background: transparent; color: inherit; }
+input[name=number] { flex: 2 1 14rem; }
+input[name=label] { flex: 1 1 8rem; }
+button { cursor: pointer; }
+button.primary { background: var(--ac); border-color: var(--ac); color: #fff; }
+.card { border: 1px solid var(--bd); border-radius: .6rem; padding: .7rem .9rem; margin-bottom: .6rem; }
+.soon .card { border-left: .3rem solid var(--ac); }
+.row { display: flex; justify-content: space-between; gap: .5rem; align-items: baseline; flex-wrap: wrap; }
+.numrow { display: flex; justify-content: space-between; align-items: center; gap: .5rem; }
+.big { font-weight: 600; }
+.sub, .err { font-size: .85rem; opacity: .7; }
+.err { color: #c00; opacity: 1; }
+.badge { font-size: .75rem; padding: .1rem .5rem; border-radius: 1rem; border: 1px solid var(--bd); text-transform: uppercase; }
+.actions { display: flex; gap: .3rem; }
+.actions button { padding: .15rem .5rem; font-size: .85rem; }
+details ul { margin: .5rem 0 0; padding-left: 1.2rem; font-size: .85rem; }
+.empty { opacity: .6; }
+.i svg { width: 1em; height: 1em; vertical-align: -.15em; }
+.logo { display: inline-flex; align-items: center; justify-content: center; width: 4rem; height: 1.3rem; vertical-align: -.2em; }
+.logo svg { width: 100%; height: 100%; display: block; fill: currentColor; }
+.chips .logo { width: 2.6rem; height: 1rem; }
+.logo-dhl { color: #d40511; } .logo-dpd { color: #dc0032; } .logo-hermes { color: #0a8fd6; }
+.logo-gls { background: #061ab1; border-radius: .25rem; padding: 0 .3rem; width: auto; height: 1.5rem; }
+.chips .logo-gls { width: auto; height: 1.2rem; }
+.logo-auto { font-size: .9rem; }
+@media (prefers-color-scheme: dark) {
+  .logo-dhl { color: #ff4d4d; } .logo-dpd { color: #ff5c7a; } .logo-hermes { color: #5cc0f0; }
+  .logo-gls { background: #2743d6; }
+  .s-delivered { color: #4ade80; } .s-out_for_delivery { color: #fbbf24; } .s-exception { color: #ff6b6b; }
+}
+.chips { display: flex; flex-wrap: wrap; gap: .4rem; flex-basis: 100%; }
+.chips label { cursor: pointer; }
+.chips input { position: absolute; opacity: 0; }
+.chips .chip { display: inline-flex; align-items: center; gap: .3rem; padding: .3rem .7rem; border: 1px solid var(--bd); border-radius: .4rem; min-height: 2.6rem; }
+.chips input:checked + .chip { outline: 2px solid var(--ac); background: color-mix(in srgb, var(--ac) 8%, transparent); }
+.chips input:focus-visible + .chip { outline: 2px dashed currentColor; }
+.head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.head h1 { margin: 0; display: flex; gap: .5rem; align-items: center; }
+.head h1 svg { width: 1.6rem; height: 1.6rem; }
+.s-delivered { color: #1a8a3a; } .s-out_for_delivery { color: #c77700; } .s-exception { color: #c00; }
+button .i { display: inline-flex; }
+.actions button, form button { display: inline-flex; align-items: center; gap: .3rem; }
+
+</style>
+</head>
+<body>
+<div class="head">
+  <h1><span class="i">{{icon "package"}}</span>{{t .Lang "title"}}</h1>
+  <button hx-post="/lang" hx-vals='{"l":"{{if eq .Lang "de"}}en{{else}}de{{end}}"}' hx-swap="none" aria-label="Language"><span class="i">{{icon "languages"}}</span>{{if eq .Lang "de"}}EN{{else}}DE{{end}}</button>
+</div>
+<form hx-post="/add" hx-target="#list" hx-on::after-request="if(event.detail.successful) this.reset()">
+  <input name="number" placeholder="{{t .Lang "number"}}" required minlength="5" autocomplete="off">
+  <input name="label" placeholder="{{t .Lang "label"}}">
+  <div class="chips">
+    <label><input type="radio" name="carrier" value="auto" checked><span class="chip logo-auto">{{t .Lang "auto"}}</span></label>
+    {{range $c := list "dhl" "dpd" "gls" "hermes"}}<label title="{{$c}}"><input type="radio" name="carrier" value="{{$c}}" aria-label="{{$c}}"><span class="chip"><span class="logo logo-{{$c}}">{{logo $c}}</span></span></label>{{end}}
+  </div>
+  <button class="primary"><span class="i">{{icon "plus"}}</span>{{t .Lang "add"}}</button>
+</form>
+<div id="list" hx-get="/list" hx-trigger="every 60s" hx-swap="innerHTML">{{template "list" .}}</div>
+</body>
+</html>
+
+{{define "card"}}
+<div class="card">
+  <div class="row">
+    <span class="big">{{if .Label}}{{.Label}}{{else}}{{.Number}}{{end}}</span>
+    <span>
+      {{if not .ETA.IsZero}}<b>{{if eq (days .ETA) 0}}{{t .L "today"}}{{else if eq (days .ETA) 1}}{{t .L "tomorrow"}}{{else}}{{day .L .ETA}}{{end}}</b>{{end}}
+      <span class="badge s-{{.Status}}"><span class="i">{{sticon .Status}}</span> {{t .L (print "st_" .Status)}}</span>
+    </span>
+  </div>
+  <div class="numrow"><span class="sub">{{.Number}}</span><span class="logo logo-{{.Carrier}}" title="{{.Carrier}}">{{logo .Carrier}}</span></div>
+  {{if .Text}}<div>{{.Text}}</div>{{end}}
+  {{if .Err}}<div class="err">{{.Err}}</div>{{end}}
+  <div class="row">
+    <span class="sub"><span class="i">{{icon "clock"}}</span> {{t .L "checked"}} {{time .LastChecked}}</span>
+    <span class="actions">
+      <button hx-post="/refresh/{{.ID}}" hx-target="#list" title="{{t .L "refresh"}}" aria-label="{{t .L "refresh"}}"><span class="i">{{icon "refresh-cw"}}</span></button>
+      <button hx-delete="/shipments/{{.ID}}" hx-target="#list" hx-confirm="{{t .L "confirm"}}" title="{{t .L "delete"}}" aria-label="{{t .L "delete"}}"><span class="i">{{icon "trash-2"}}</span></button>
+    </span>
+  </div>
+  {{if .Events}}<details><summary class="sub"><span class="i">{{icon "map-pin"}}</span> {{t .L "history"}}</summary><ul>
+    {{range .Events}}<li>{{time .Time}} {{.Text}}{{if .Location}} ({{.Location}}){{end}}</li>{{end}}
+  </ul></details>{{end}}
+</div>
+{{end}}
+
+{{define "list"}}
+{{$l := .Lang}}
+{{if .Soon}}<h2>{{t $l "soon"}}</h2>{{range .Soon}}<div class="soon">{{template "card" .}}</div>{{end}}{{end}}
+{{if .Transit}}<h2>{{t $l "transit"}}</h2>{{range .Transit}}{{template "card" .}}{{end}}{{end}}
+{{if .Done}}<h2>{{t $l "done"}}</h2>{{range .Done}}{{template "card" .}}{{end}}{{end}}
+{{if not (or .Soon .Transit .Done)}}<p class="empty">{{t $l "empty"}}</p>{{end}}
+{{end}}
