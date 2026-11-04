@@ -1,5 +1,6 @@
 services:
   tracker:
+    image: ghcr.io/jongslop/local-shipment-tracker:latest
     build: .
     restart: unless-stopped
     ports: ["8080:8080"]

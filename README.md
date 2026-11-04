@@ -21,8 +21,22 @@ Then open http://localhost:8080.
 ## Docker (Synology)
 
 ```sh
-docker compose up -d --build
+docker compose up -d
 ```
+
+A prebuilt image is published on every push to `main`:
+
+```sh
+docker pull ghcr.io/jongslop/local-shipment-tracker:latest
+```
+
+If the package is still private, log in first with a GitHub token that has `read:packages`:
+
+```sh
+echo $TOKEN | docker login ghcr.io -u YOUR_USER --password-stdin
+```
+
+Use `docker compose up -d --build` to build from source instead.
 
 The database lives in `./data/tracker.db`. Set `TRACK17_KEY` in `.env` next to `docker-compose.yml`.
 
